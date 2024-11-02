@@ -145,7 +145,8 @@ export const reply = async () => {
   console.info("📥 Mentions:");
   console.dir(mentions);
 
-  for (const mention of mentions) {
+  for (let i = 0; i < mentions.length; i++) {
+    const mention = mentions[i];
     // Skip fetching conversation: https://devcommunity.x.com/t/get-2-tweets-search-recent-always-returns-503/228645
     // =============================================================================================================
     // if (!mention.conversation_id) {
@@ -181,7 +182,7 @@ export const reply = async () => {
         content: [
           {
             type: "text" as const,
-            text: includes.tweets[0].text,
+            text: includes.tweets[i].text,
           },
         ],
       },
