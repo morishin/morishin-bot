@@ -144,6 +144,8 @@ export const reply = async () => {
 
   console.info("📥 Mentions:");
   console.dir(mentions);
+  console.info("📥 Includes:");
+  console.dir(includes);
 
   for (let i = 0; i < mentions.length; i++) {
     const mention = mentions[i];
@@ -176,16 +178,23 @@ export const reply = async () => {
     //     ],
     //   }));
     // =============================================================================================================
+    const sourceTweet = includes.tweets.find((tweet) =>
+      mention.referenced_tweets?.some((ref) => ref.id === tweet.id)
+    );
     const messages = [
-      {
-        role: "assistant" as const,
-        content: [
-          {
-            type: "text" as const,
-            text: includes.tweets[i].text,
-          },
-        ],
-      },
+      ...(sourceTweet
+        ? [
+            {
+              role: "assistant" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text: sourceTweet.text,
+                },
+              ],
+            },
+          ]
+        : []),
       {
         role: "user" as const,
         content: [
