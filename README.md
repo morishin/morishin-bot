@@ -28,3 +28,7 @@ https://x.com/morishin_bot
     ```sh
     deno run tweet
     ```
+1. Reply to mentions
+    ```sh
+    deno run reply
+    ```
