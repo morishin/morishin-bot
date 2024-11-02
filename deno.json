@@ -2,6 +2,7 @@
   "workspace": ["./modeler", "./tweeter"],
   "tasks": {
     "create-model": "deno run --allow-read --allow-write --allow-net --allow-env --env-file=modeler/.env modeler/main.ts",
-    "tweet": "deno run --allow-env --env-file=tweeter/.env --allow-net tweeter/main.ts"
+    "tweet": "deno run --allow-env --env-file=tweeter/.env --allow-net tweeter/tweet.ts",
+    "reply": "deno run --unstable-kv --allow-env --env-file=tweeter/.env --allow-net tweeter/reply.ts"
   }
 }
