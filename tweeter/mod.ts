@@ -118,15 +118,24 @@ export const reply = async () => {
   const lastProcessedMentionId = (
     await kv.get<string>(["lastProcessedMentionId"])
   ).value;
-  const { tweets: mentions } = await twitter.readOnly.v2.userMentionTimeline(
-    botUserId,
-    {
+  const { tweets: mentions, includes } = await twitter.readOnly.v2
+    .userMentionTimeline(botUserId, {
       since_id: lastProcessedMentionId ?? undefined,
       // Ignore mentions older than 7 days
       start_time: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      "tweet.fields": "conversation_id",
-    }
-  );
+      "tweet.fields": ["conversation_id", "text", "author_id", "created_at"],
+      expansions: ["referenced_tweets.id"],
+    })
+    .catch((err) => {
+      console.error(err);
+      throw err;
+    });
+
+  if (mentions.length === 0) {
+    console.info("🔍 No new mentions found");
+    return;
+  }
+
   mentions.sort((a, b) =>
     !a.created_at || !b.created_at
       ? 0
@@ -167,6 +176,15 @@ export const reply = async () => {
     //   }));
     // =============================================================================================================
     const messages = [
+      {
+        role: "assistant" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: includes.tweets[0].text,
+          },
+        ],
+      },
       {
         role: "user" as const,
         content: [
