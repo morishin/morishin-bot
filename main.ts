@@ -5,7 +5,8 @@ import { reply, tweet } from "./tweeter/mod.ts";
 // See: https://developer.x.com/en/portal/products
 Deno.cron(
   "Post a tweet",
-  "0 8-23 * * *",
+  // JST 8:00-23:00 every hour
+  "0 23,0-14 * * *",
   {
     backoffSchedule: [],
   },
