@@ -1,4 +1,5 @@
 import OpenAI from "https://deno.land/x/openai@v4.68.2/mod.ts";
+import { ChatCompletionMessageParam } from "https://deno.land/x/openai@v4.68.2/resources/mod.ts";
 import { TwitterApi } from "npm:twitter-api-v2@1.18.1";
 
 const env = () => {
@@ -149,63 +150,65 @@ export const reply = async () => {
 
   for (let i = 0; i < mentions.length; i++) {
     const mention = mentions[i];
-    // Skip fetching conversation: https://devcommunity.x.com/t/get-2-tweets-search-recent-always-returns-503/228645
-    // =============================================================================================================
-    if (!mention.conversation_id) {
-      continue;
+    let messages: ChatCompletionMessageParam[];
+    try {
+      if (!mention.conversation_id) {
+        continue;
+      }
+      const { tweets: conversations } = await twitter.readOnly.v2.search({
+        query: `conversation_id:${mention.conversation_id}`,
+        "tweet.fields": "author_id,text",
+      });
+
+      console.info("📥 Conversations:");
+      console.dir(conversations);
+
+      messages = conversations
+        .slice(conversations.findIndex((tweet) => tweet.id === mention.id))
+        .toReversed()
+        .map((tweet) => ({
+          role:
+            tweet.author_id === botUserId
+              ? ("assistant" as const)
+              : ("user" as const),
+          content: [
+            {
+              type: "text" as const,
+              text: tweet.text,
+            },
+          ],
+        }));
+    } catch {
+      // Fallback when twitter.readOnly.v2.search throws some error
+      // ref: https://devcommunity.x.com/t/get-2-tweets-search-recent-always-returns-503/228645
+      const sourceTweet = includes.tweets.find((tweet) =>
+        mention.referenced_tweets?.some((ref) => ref.id === tweet.id)
+      );
+      messages = [
+        ...(sourceTweet
+          ? [
+              {
+                role: "assistant" as const,
+                content: [
+                  {
+                    type: "text" as const,
+                    text: sourceTweet.text,
+                  },
+                ],
+              },
+            ]
+          : []),
+        {
+          role: "user" as const,
+          content: [
+            {
+              type: "text" as const,
+              text: mention.text,
+            },
+          ],
+        },
+      ];
     }
-    const { tweets: conversations } = await twitter.readOnly.v2.search({
-      query: `conversation_id:${mention.conversation_id}`,
-      "tweet.fields": "author_id,text",
-    });
-
-    console.info("📥 Conversations:");
-    console.dir(conversations);
-
-    const messages = conversations
-      .slice(conversations.findIndex((tweet) => tweet.id === mention.id))
-      .toReversed()
-      .map((tweet) => ({
-        role:
-          tweet.author_id === botUserId
-            ? ("assistant" as const)
-            : ("user" as const),
-        content: [
-          {
-            type: "text" as const,
-            text: tweet.text,
-          },
-        ],
-      }));
-    // =============================================================================================================
-    // const sourceTweet = includes.tweets.find((tweet) =>
-    //   mention.referenced_tweets?.some((ref) => ref.id === tweet.id)
-    // );
-    // const messages = [
-    //   ...(sourceTweet
-    //     ? [
-    //         {
-    //           role: "assistant" as const,
-    //           content: [
-    //             {
-    //               type: "text" as const,
-    //               text: sourceTweet.text,
-    //             },
-    //           ],
-    //         },
-    //       ]
-    //     : []),
-    //   {
-    //     role: "user" as const,
-    //     content: [
-    //       {
-    //         type: "text" as const,
-    //         text: mention.text,
-    //       },
-    //     ],
-    //   },
-    // ];
-    // =============================================================================================================
 
     console.info("📥 Messages:");
     console.dir(messages);
