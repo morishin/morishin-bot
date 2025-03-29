@@ -1,8 +1,14 @@
 import { reply, tweet } from "./tweeter/mod.ts";
 
-// HTTP server for debugging
+const HTML = await Deno.readFile("./static/index.html");
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
+  if (req.method === "GET" && url.pathname === "/") {
+    return new Response(HTML, {
+      headers: { "content-type": "text/html" },
+    });
+  }
   if (req.method === "POST" && url.pathname === "/tweet") {
     await tweet();
     return new Response("Tweet posted", { status: 200 });
