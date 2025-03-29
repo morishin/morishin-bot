@@ -1,5 +1,19 @@
 import { reply, tweet } from "./tweeter/mod.ts";
 
+// HTTP server for debugging
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+  if (req.method === "POST" && url.pathname === "/tweet") {
+    await tweet();
+    return new Response("Tweet posted", { status: 200 });
+  }
+  if (req.method === "POST" && url.pathname === "/reply") {
+    await reply();
+    return new Response("Reply checked and posted if needed", { status: 200 });
+  }
+  return new Response("Not found", { status: 404 });
+});
+
 // Due to the rate limit for `POST /2/tweets`
 // => 17 requests / 24 hours & 500 posts / month
 // See: https://developer.x.com/en/portal/products
