@@ -2,6 +2,10 @@ import OpenAI from "https://deno.land/x/openai@v4.68.2/mod.ts";
 import { ChatCompletionMessageParam } from "https://deno.land/x/openai@v4.68.2/resources/mod.ts";
 import { TwitterApi } from "npm:twitter-api-v2@1.18.1";
 
+const logObject = (obj: any) => {
+  console.log(JSON.stringify(obj));
+};
+
 const env = () => {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   const model = Deno.env.get("MODEL_NAME");
@@ -144,9 +148,7 @@ export const reply = async () => {
   );
 
   console.info("📥 Mentions:");
-  console.dir(mentions);
-  console.info("📥 Includes:");
-  console.dir(includes);
+  logObject(mentions);
 
   for (let i = 0; i < mentions.length; i++) {
     const mention = mentions[i];
@@ -155,16 +157,30 @@ export const reply = async () => {
       if (!mention.conversation_id) {
         continue;
       }
-      const { tweets: conversations } = await twitter.readOnly.v2.search({
-        query: `conversation_id:${mention.conversation_id}`,
-        "tweet.fields": "author_id,text",
-      });
+      const conversationHeadTweet = await twitter.readOnly.v2.singleTweet(
+        mention.conversation_id,
+        { "tweet.fields": "author_id,text" }
+      );
+      const { tweets: conversationTailTweets } =
+        await twitter.readOnly.v2.search({
+          query: `conversation_id:${mention.conversation_id}`,
+          "tweet.fields": "author_id,text",
+        });
+      const conversations = [
+        ...conversationTailTweets,
+        conversationHeadTweet.data,
+      ];
 
       console.info("📥 Conversations:");
-      console.dir(conversations);
+      logObject(conversations);
 
       messages = conversations
-        .slice(conversations.findIndex((tweet) => tweet.id === mention.id))
+        .slice(
+          Math.max(
+            0,
+            conversations.findIndex((tweet) => tweet.id === mention.id)
+          )
+        )
         .toReversed()
         .map((tweet) => ({
           role:
@@ -178,7 +194,10 @@ export const reply = async () => {
             },
           ],
         }));
-    } catch {
+    } catch (error) {
+      console.warn("twitter.readOnly.v2.search threw an error:", error);
+      console.info("📥 Includes:");
+      logObject(includes);
       // Fallback when twitter.readOnly.v2.search throws some error
       // ref: https://devcommunity.x.com/t/get-2-tweets-search-recent-always-returns-503/228645
       const sourceTweet = includes.tweets.find((tweet) =>
@@ -211,7 +230,7 @@ export const reply = async () => {
     }
 
     console.info("📥 Messages:");
-    console.dir(messages);
+    logObject(messages);
 
     const response = await openai.chat.completions.create({
       model,
