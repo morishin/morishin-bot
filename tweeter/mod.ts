@@ -1,6 +1,7 @@
 import OpenAI from "https://deno.land/x/openai@v4.68.2/mod.ts";
 import { ChatCompletionMessageParam } from "https://deno.land/x/openai@v4.68.2/resources/mod.ts";
 import { TwitterApi } from "npm:twitter-api-v2@1.18.1";
+import { datetime } from "https://deno.land/x/ptera/mod.ts";
 
 const logObject = (obj: any) => {
   console.log(JSON.stringify(obj));
@@ -43,10 +44,9 @@ export const tweet = async () => {
     apiKey,
   });
 
-  const date = new Date();
-  const formattedDateTime = `${date.getFullYear()}年${
-    date.getMonth() + 1
-  }月${date.getDate()}日${date.getHours()}時${date.getMinutes()}分`;
+  const now = datetime().toZonedTime("Asia/Tokyo");
+  const formattedDateTime = `${now.year}年${now.month}月${now.day}日${now.hour}時${now.minute}分`;
+
   const response = await openai.chat.completions.create({
     model,
     messages: [
